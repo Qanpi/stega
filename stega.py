@@ -1,6 +1,7 @@
 from cv2 import cv2
 import numpy as np
 
+import timeit as tt
 #ENCODING ----------------------------------------------------------------------------------------------
 
 def encode_message(msg, size=None):
@@ -8,14 +9,14 @@ def encode_message(msg, size=None):
     size = size if size else len(msg) * 8
     bits = np.full(size, 0)
 
-    #Skipping over 8 elements for better performance (maybe) haven't tested if it actually improves performance
+    #Skipping over 8 elements for better performance
     for i in range(0, bits.size, 8):        
         o = ord(msg[i//8])
 
         #Get binary and embed it into the list
-        binary = bin(o)[2:]
-        binary = binary.zfill(8)
-        bits[i:i+8] = list(binary)
+        byte = bin(o)[2:]
+        byte = byte.zfill(8)
+        bits[i:i+8] = list(byte)
     return bits
 
 def inject_bits(i, b):
