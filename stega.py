@@ -19,11 +19,9 @@ def encode_message(msg, size=None):
         bits[i:i+8] = list(byte)
     return bits
 
-def inject_bits(i, b):
-        output = (i & ~1) | b
-        return output
-
-inject_bits = np.vectorize(inject_bits) #vectorizing for better performance
+def inject_bits(x1, x2):
+        x1 = np.bitwise_and(x1, 254)       
+        return np.bitwise_or(x1, x2)
 
 def put_binary(img, binary, ci=0):
     channel = img[:,:, ci] #ci stands for channel id aka which channel to insert binary into (first channel by default)
@@ -38,10 +36,8 @@ def put_binary(img, binary, ci=0):
 
 #DECODING ----------------------------------------------------------------------------------------------
 
-def scrape_bits(b):
-    return b & 1 #return only a the least significant bit
-
-scrape_bits = np.vectorize(scrape_bits) #vectorizing for better performance
+def scrape_bits(x1):
+    return np.bitwise_and(x1, 1) #return only a the least significant bit
 
 def get_binary(img, ci=0):
     channel = img[:,:, ci]
