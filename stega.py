@@ -4,7 +4,7 @@ import numpy as np
 import timeit as tt
 #ENCODING ----------------------------------------------------------------------------------------------
 
-def encode_message(msg, size=None):
+def msg_to_binary(msg, size=None):
     """Converts a text message into an array of binary data"""
     size = size if size else len(msg) * 8
     bits = np.full(size, 0)
@@ -23,7 +23,7 @@ def inject_bits(x1, x2):
         x1 = np.bitwise_and(x1, 254)       
         return np.bitwise_or(x1, x2)
 
-def put_binary(img, binary, ci=0):
+def insert_binary(img, binary, ci=0):
     channel = img[:,:, ci] #ci stands for channel id aka which channel to insert binary into (first channel by default)
     
     if binary.shape != channel.shape:
@@ -39,12 +39,12 @@ def put_binary(img, binary, ci=0):
 def scrape_bits(x1):
     return np.bitwise_and(x1, 1) #return only a the least significant bit
 
-def get_binary(img, ci=0):
+def extract_binary(img, ci=0):
     channel = img[:,:, ci]
 
     return scrape_bits(channel)
     
-def decode_message(binary):
+def binary_to_msg(binary):
     binary = binary.flatten() #flatten the array to prevent from errors due to multiple dimensions
 
     message = ""
