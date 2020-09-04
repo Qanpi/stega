@@ -4,20 +4,17 @@ import numpy as np
 import timeit as tt
 #ENCODING ----------------------------------------------------------------------------------------------
 
-def msg_to_binary(msg, size=None):
+def msg_to_binary(msg):
     """Converts a text message into an array of binary data"""
-    size = size if size else len(msg) * 8
-    bits = np.full(size, 0)
+    binary = np.array([[ord(ch)] * 8 for ch in msg], dtype=np.uint8) #numpy array of arrays containing ord() of character 8 times
 
-    #Skipping over 8 elements for better performance
-    for i in range(0, bits.size, 8):        
-        o = ord(msg[i//8])
+    iterator = np.resize(np.arange(8, dtype=np.uint8), binary.shape)
+    mask = np.left_shift(1, iterator)
 
-        #Get binary and embed it into the list
-        byte = bin(o)[2:]
-        byte = byte.zfill(8)
-        bits[i:i+8] = list(byte)
-    return bits
+    bit = np.bitwise_and(binary, mask)
+    output = np.right_shift(bit, iterator)
+    
+    return output
 
 def inject_bits(x1, x2):
         x1 = np.bitwise_and(x1, 254)       
@@ -30,7 +27,7 @@ def insert_binary(img, binary, ci=0):
         binary = np.resize(binary, channel.shape) #if the binary array is not big enough, it will loop over
 
     output = inject_bits(channel, binary)
-    img[:,:, ci] = output.astype(np.uint8) #uint8 used cuz otherwise cv2 starts complaining about some depth stuff
+    img[:,:, ci] = output.astype(np.uint8) #uint8 since the data is in the range of 0-255
     return img 
         
 
@@ -43,18 +40,21 @@ def extract_binary(img, ci=0):
     channel = img[:,:, ci]
 
     return scrape_bits(channel)
-    
+
 def binary_to_msg(binary):
-    binary = binary.flatten() #flatten the array to prevent from errors due to multiple dimensions
+    groups = binary.size // 8
+    binary = np.reshape(binary, (groups, 8))
 
-    message = ""
-    for i in range(0, binary.size, 8):
-        byte = binary[i:i+8]
-        byte = "".join(str(b) for b in byte) #convert an array of 8 bits [0,1,1,0, ...] into a string "0110..."
-        ch = chr(int(byte, 2)) #get the character represented by the binary 
+    iterator = np.resize(np.arange(8, dtype=np.uint8), binary.shape)
 
-        message += ch
-    return message
+    binary = np.left_shift(binary, iterator)
+    output = []
+    
+    for i in range(len(binary)):
+        ch = chr(np.bitwise_or.reduce(binary[i]))
+        output.append(ch) 
+
+    return "".join(output)
 
 #OTHER ----------------------------------------------------------------------------------------------
 
