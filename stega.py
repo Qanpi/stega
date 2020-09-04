@@ -27,7 +27,7 @@ def insert_binary(img, binary, ci=0):
         binary = np.resize(binary, channel.shape) #if the binary array is not big enough, it will loop over
 
     output = inject_bits(channel, binary)
-    img[:,:, ci] = output.astype(np.uint8) #uint8 since the data is in the range of 0-255
+    img[:,:, ci] = output
     return img 
         
 
@@ -48,11 +48,11 @@ def binary_to_msg(binary):
     iterator = np.resize(np.arange(8, dtype=np.uint8), binary.shape)
 
     binary = np.left_shift(binary, iterator)
-    output = []
+    output = np.empty(groups, str)
     
     for i in range(len(binary)):
         ch = chr(np.bitwise_or.reduce(binary[i]))
-        output.append(ch) 
+        output[i] = ch 
 
     return "".join(output)
 
