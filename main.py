@@ -2,8 +2,6 @@ from cv2 import cv2
 import numpy as np
 
 import stega as st
-import timeit as tt
-import time
 
 text = open("input/example.txt").read()
 img = cv2.imread("images/lena.png")
