@@ -1,8 +1,6 @@
 from cv2 import cv2
 import numpy as np
 
-import timeit as tt
-import time
 #ENCODING ----------------------------------------------------------------------------------------------
 
 def msg_to_binary(msg):
@@ -22,6 +20,7 @@ def inject_bits(x1, x2):
     return np.bitwise_or(x1, x2)
 
 def insert_binary(img, binary, ci=0):
+    """Inserts binary data into the least significant bit of a color channel value"""
     channel = img[:,:, ci] #ci stands for channel id aka which channel to insert binary into (first channel by default)
     
     binary = np.resize(binary, channel.shape) #if the binary array is not big enough, it will loop over
@@ -37,10 +36,12 @@ def scrape_bits(x1):
     return np.bitwise_and(x1, 1) #return only the least significant bit
 
 def extract_binary(img, ci=0):
+    """Extracts binary data from the least significant bit of a color channel value"""
     channel = img[:,:, ci]
     return scrape_bits(channel)
 
 def binary_to_msg(binary):
+    """Converts an array of binary data into a text message"""
     groups = binary.size // 8
     binary = np.reshape(binary, (groups, 8))
 
