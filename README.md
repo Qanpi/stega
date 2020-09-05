@@ -1,4 +1,4 @@
-# hidden-messages-in-images
+# stega
 
 Putting hidden messages into images (memes) with python. Inspired by Computerphile.
 The project is open-source and free to use for anyone and everyone.
