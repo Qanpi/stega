@@ -16,17 +16,19 @@ args = parser.parse_args()
 
 # CREATING BASIC VARIABLES ---
 image = cv2.imread(args.image)
-message = st.read_message(args.message, ci=(0,3))
+message = st.read_message(args.message, ci=(0,1))
 
 # EXAMPLE CODE ---
-e_binary = st.convert_msg_to_binary(message)
+e_binary = st.convert_arr_to_binary(message)
 e_result = st.insert_binary(image, e_binary, ci=(0,3))
 
-d_binary = st.extract_binary(e_result, ci=(0,3))
-d_result = st.convert_binary_to_msg(d_binary)
+d_binary = st.extract_binary(e_result, ci=(0,1))
+d_result = st.convert_binary_to_arr(d_binary, True)
+
 st.write_message(d_result, "output/" + ntpath.basename(args.message))
 
 cv2.imshow("original", image)
 cv2.imshow("encoded", e_result)
-cv2.imshow("decoded", np.resize(d_result, (220, 220, 3)))
+
+cv2.imshow("decoded", d_result)
 cv2.waitKey(0)
