@@ -15,10 +15,8 @@ def read_message(path, ci=(0,1)): #ci stands for channel id aka which channel to
     ext = ntpath.splitext(path)[-1]
     if   ext == ".txt":         
         file_content = open(path, mode="rb").read()        
-        message = struct.unpack("B" * len(file_content), file_content)
-        message = np.asarray(message, dtype=np.uint8)
-
-        header = _compose_header("|T", len(message))
+        message = np.asarray(struct.unpack("B" * len(file_content), file_content))
+        header = _compose_header("|T", message.size)
     elif ext in [".png", ".jpg", ".jpeg"]: 
         message = cv2.imread(path)[:,:, ci[0]:ci[1]]
         header = _compose_header("|I", message.shape)
@@ -27,19 +25,19 @@ def read_message(path, ci=(0,1)): #ci stands for channel id aka which channel to
     message = np.concatenate([header, message], axis=None)
     return message
 
-def convert_arr_to_binary(msg):
-    """Convert a message (array of 8-bit ints) into an array of binary data"""
-    msg = np.repeat(msg, 8)
+def convert_arr_to_binary(msg, n=8):
+    """Convert a message (array of n-bit ints) into an array of binary data"""
+    msg = np.repeat(msg, n)
 
-    iterator = np.tile(np.arange(8, dtype=np.uint8), msg.size // 8)
+    iterator = np.tile(np.arange(n), msg.size // n)
     mask = np.left_shift(1, iterator)
 
     bit = np.bitwise_and(msg, mask)
     binary = np.right_shift(bit, iterator)
-    return binary
+    return binary.astype(np.dtype("u" + str(n//8)))
 
 def _inject_bits(x1, x2):
-    x1 = np.bitwise_and(x1, 254)       
+    x1 = np.bitwise_and(x1, 254)   
     return np.bitwise_or(x1, x2)
 
 def insert_binary(img, binary, ci=(0,1)):
@@ -64,36 +62,40 @@ def extract_binary(img, ci=(0,1)):
     return _scrape_bits(channel)
 
 def _parse_header(header): 
+    header = header.astype(np.uint8)
     mtype = "".join([chr(i) for i in header[:2]])
-    if mtype=="|T": size = struct.unpack("I", header[2:6])
-    else:           
-        size = struct.unpack("H" * 3, header[2:])
-    return mtype, size
 
-def convert_binary_to_arr(binary, all=False): #all stands for whether u want all (even repetitive) data from the image, or just the original size
+    if mtype=="|T":   shape = struct.unpack("I", header[2:6])
+    elif mtype=="|I": shape = struct.unpack("H" * 3, header[2:])
+    else: raise ValueError("Incorrect header format or header missing.")
+    return mtype, shape
+
+def convert_binary_to_arr(binary, n=8, all=False): #all stands for whether u want all (even repetitive) data from the image, or just the original size
     """Convert an array of binary data into a message"""
-    groups = binary.size // 8
-    binary = np.ravel(binary)
+    groups = binary.size // n
+    binary = np.resize(binary, (groups, n))
 
-    iterator = np.tile(np.arange(8, dtype=np.uint8), groups)
+    iterator = np.tile(np.arange(n, dtype=np.dtype("u" + str(n//8))), (groups, 1))
     binary = np.left_shift(binary, iterator)
 
-    binary = np.resize(binary, (groups, 8))
     binary = np.bitwise_or.reduce(binary, axis=1)
 
-    header = binary[:8]
-    message = binary[8:]
-    t, size = _parse_header(header)
+    header  = binary[:8]
+    t, shape = _parse_header(header)
+    size = np.multiply.reduce(shape)
 
-    if not all: return np.resize(message, size)
+    message = binary[8:size+8]
+    if not all: return np.resize(message, shape)
     elif t == "|I": 
-        rows = message.size // size[1] // size[2]
-        return np.resize(message, (rows, size[1], size[2]))
-    else: return message
-
+        rows = binary.size // shape[1] // shape[2]
+        return np.resize(message, (rows, shape[1], shape[2]))
+    elif t == "|T": 
+        wraps = binary.size // (size+8) + 1
+        return np.resize(message, binary.size - wraps * 8)
+        
 def write_message(msg, path):
     ext = ntpath.splitext(path)[-1]
-    if ext == ".txt": open(path, "wb").write(struct.pack("B" * msg.size, *msg.flatten()))
+    if ext == ".txt": open(path, "wb").write(struct.pack("B" * msg.size, *msg.ravel()))
     elif ext in [".png", ".jpeg", ".jpg"]: cv2.imwrite(path, msg)
     else: raise TypeError("Unsupported file extension")
 
@@ -102,7 +104,6 @@ def write_message(msg, path):
 def difference(x, y, ci=(0,1)):
     a = x[:,:, ci[0]:ci[1]]
     b = y[:,:, ci[0]:ci[1]]
-
     return (a - b) 
 
 
