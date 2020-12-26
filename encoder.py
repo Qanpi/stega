@@ -1,3 +1,7 @@
+# This a demo file showing how the stega.py package can be used, it is not a part of the said package
+#
+#
+
 from PIL import Image
 import numpy as np
 import argparse
@@ -13,12 +17,12 @@ parser.add_argument("-o", "--output", metavar="p",  type=str, help="a path for t
 
 args = parser.parse_args()
 
-# Opening the image that will be injected the message into ---
-image = np.asarray(Image.open(args.image))
+# Creating an Encoder class
+encoder = st.Encoder()
 
-# Creating an Encoder class and injecting the message
-encoder = st.Encoder(image)
-message = encoder.read_message(args.message)
+# Opening the image and the message and commencing the injection process
+image = np.asarray(Image.open(args.image))
+message = encoder.parse_message(args.message)
 
 binary = encoder.convert_msg_to_binary(message)
 image_encoded = encoder.insert_binary(image, binary)
@@ -29,3 +33,4 @@ st.write_file(image_encoded, args.output + "/" + ntpath.splitext(ntpath.basename
 # Demonstrating the difference
 Image.fromarray(image).show("original")
 Image.fromarray(image_encoded).show("encoded")
+

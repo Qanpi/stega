@@ -13,7 +13,7 @@ class Encoder:
         else:             header = np.array([124, 73, *struct.pack("HHH", *size)   ]) #[124, 73] is ascii for '|I' which signifies that this message is an image
         return header.astype(np.uint8)
 
-    def read_message(self, path, ci=(0,1)): #ci stands for channel id aka which channel to raad binary from, if the message is an image
+    def parse_message(self, path, ci=(0,1)): #ci stands for channel id aka which channel to raad binary from, if the message is an image
         ext = ntpath.splitext(path)[-1]
         if   ext == ".txt":         
             file_content = open(path, mode="rb").read()        
@@ -24,6 +24,7 @@ class Encoder:
             header = self._compose_header("|I", message.shape)
         else: raise TypeError("Unsupported file extension.")
 
+        print(header)
         message = np.concatenate([header, message], axis=None)
         return message
 
@@ -54,51 +55,53 @@ class Encoder:
 
 #DECODING ----------------------------------------------------------------------------------------------
 
-def _scrape_bits(x1):
-    return np.bitwise_and(x1, 1) #return only the least significant bit
+class Decoder:
 
-def extract_binary(img, ci=(0,1)):
-    """Extract binary data from the least significant bit of a color channel value"""
-    channel = img[:,:, ci[0]:ci[1]]
-    return _scrape_bits(channel)
+    def _scrape_bits(self, x1):
+        return np.bitwise_and(x1, 1) #return only the least significant bit
 
-def _parse_header(header): 
-    header = header.astype(np.uint8)
-    mtype = "".join([chr(i) for i in header[:2]])
+    def extract_binary(self, img, ci=(0,1)):
+        """Extract binary data from the least significant bit of a color channel value"""
+        channel = img[:,:, ci[0]:ci[1]]
+        return self._scrape_bits(channel)
 
-    if mtype=="|T":   shape = struct.unpack("I", header[2:6])
-    elif mtype=="|I": shape = struct.unpack("H" * 3, header[2:])
-    else: raise ValueError("Incorrect header format or header missing.")
-    return mtype, shape
+    def _parse_header(self, header): 
+        header = header.astype(np.uint8)
+        mtype = "".join([chr(i) for i in header[:2]])
 
-def convert_binary_to_arr(binary, n=8, all=False): #all stands for whether u want all (even repetitive) data from the image, or just the original size
-    """Convert an array of binary data into a message"""
-    groups = binary.size // n
-    binary = np.resize(binary, (groups, n))
+        if mtype=="|T":   shape = struct.unpack("I", header[2:6])
+        elif mtype=="|I": shape = struct.unpack("H" * 3, header[2:])
+        else: raise ValueError("Incorrect header format or header missing.")
+        return mtype, shape
 
-    iterator = np.tile(np.arange(n, dtype=np.dtype("u" + str(n//8))), (groups, 1))
-    binary = np.left_shift(binary, iterator)
+    def convert_binary_to_arr(self, binary, n=8, all=False): #all stands for whether u want all (even repetitive) data from the image, or just the original size
+        """Convert an array of binary data into a message"""
+        groups = binary.size // n
+        binary = np.resize(binary, (groups, n))
 
-    binary = np.bitwise_or.reduce(binary, axis=1)
+        iterator = np.tile(np.arange(n, dtype=np.dtype("u" + str(n//8))), (groups, 1))
+        binary = np.left_shift(binary, iterator)
 
-    header  = binary[:8]
-    t, shape = _parse_header(header)
-    size = np.multiply.reduce(shape)
+        binary = np.bitwise_or.reduce(binary, axis=1)
 
-    message = binary[8:size+8]
-    if not all and binary.size > size: return np.resize(message, shape)
-    elif t == "|I": 
-        rows = binary.size // shape[1] // shape[2] 
-        return np.resize(message, (rows, shape[1], shape[2]))
-    elif t == "|T": 
-        wraps = binary.size // (size+8) + 1
-        return np.resize(message, binary.size - wraps * 8)
+        header  = binary[:8]
+        t, shape = self._parse_header(header)
+        size = np.multiply.reduce(shape)
+
+        message = binary[8:size+8]
+        if not all and binary.size > size: return np.resize(message, shape)
+        elif t == "|I": 
+            rows = binary.size // shape[1] // shape[2] 
+            return np.resize(message, (rows, shape[1], shape[2])), ".png"
+        elif t == "|T": 
+            wraps = binary.size // (size+8) + 1
+            return np.resize(message, binary.size - wraps * 8), ".txt"
 
 def write_file(msg, path, ext):  
     if ext == ".txt": open(path + ".txt", "wb").write(struct.pack("B" * msg.size, *msg.ravel()))
     elif ext in [".png", ".jpeg", ".jpg"]: 
         img = Image.fromarray(msg)
-        img.save(path + ".output" + ".png", optimize=True, compress_level=9)
+        img.save(path + "_output" + ".png", optimize=True, compress_level=9)
     else: raise TypeError("Unsupported file extension")
 
 #OTHER ----------------------------------------------------------------------------------------------

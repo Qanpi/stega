@@ -1,3 +1,7 @@
+# This a demo file showing how the stega.py package can be used, it is not a part of the said package
+#
+#
+
 from PIL import Image
 import numpy as np
 import argparse
@@ -12,14 +16,18 @@ parser.add_argument("-o", "--output", metavar="p",  type=str, help="a path for t
 
 args = parser.parse_args()
 
-# CREATING BASIC VARIABLES ---
+# Creating a Decoder class
+decoder = st.Decoder()
+
+# Opening the image and commencing the dejection process
 image = np.asarray(Image.open(args.image))
 
-# EXAMPLE CODE ---
-binary = st.extract_binary(image, (0,3))
-decoded_message = st.convert_binary_to_arr(binary, all=True)
+binary = decoder.extract_binary(image)
+message_decoded, ext = decoder.convert_binary_to_arr(binary, all=True)
 
-st.write_file(decoded_message, args.output + "/" + ntpath.splitext(ntpath.basename(args.image))[0], ".png")
+st.write_file(message_decoded, args.output + "/" + ntpath.splitext(ntpath.basename(args.image))[0], ext)
 
-Image.fromarray(image).show("original")
-Image.fromarray(decoded_message).show("decoded")
+if ext == ".png":
+    Image.fromarray(image).show("original")
+    Image.fromarray(message_decoded).show("decoded")
+
