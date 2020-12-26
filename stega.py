@@ -1,55 +1,56 @@
 import numpy as np
-from cv2 import cv2
+from PIL import Image
 
 import struct
 import ntpath
 
 #ENCODING ----------------------------------------------------------------------------------------------
 
-def _compose_header(mtype, size):
-    if mtype == "|T": header = np.array([124, 84, *struct.pack("I", size), 0, 0]) #[124, 84] is ascii for '|T' which signifies that this message is text
-    else:             header = np.array([124, 73, *struct.pack("HHH", *size)   ]) #[124, 73] is ascii for '|I' which signifies that this message is an image
-    return header.astype(np.uint8)
+class Encoder:
 
-def read_message(path, ci=(0,1)): #ci stands for channel id aka which channel to insert binary into (first channel by default)
-    ext = ntpath.splitext(path)[-1]
-    if   ext == ".txt":         
-        file_content = open(path, mode="rb").read()        
-        message = np.asarray(struct.unpack("B" * len(file_content), file_content))
-        header = _compose_header("|T", message.size)
-    elif ext in [".png", ".jpg", ".jpeg"]: 
-        message = cv2.imread(path)[:,:, ci[0]:ci[1]]
-        header = _compose_header("|I", message.shape)
-    else: raise TypeError("Unsupported file extension.")
+    def _compose_header(self, mtype, size):
+        if mtype == "|T": header = np.array([124, 84, *struct.pack("I", size), 0, 0]) #[124, 84] is ascii for '|T' which signifies that this message is text
+        else:             header = np.array([124, 73, *struct.pack("HHH", *size)   ]) #[124, 73] is ascii for '|I' which signifies that this message is an image
+        return header.astype(np.uint8)
 
-    message = np.concatenate([header, message], axis=None)
-    return message
+    def read_message(self, path, ci=(0,1)): #ci stands for channel id aka which channel to raad binary from, if the message is an image
+        ext = ntpath.splitext(path)[-1]
+        if   ext == ".txt":         
+            file_content = open(path, mode="rb").read()        
+            message = np.asarray(struct.unpack("B" * len(file_content), file_content))
+            header = self._compose_header("|T", message.size)
+        elif ext in [".png", ".jpg", ".jpeg"]: 
+            message = np.asarray(Image.open(path))[:,:, ci[0]:ci[1]]
+            header = self._compose_header("|I", message.shape)
+        else: raise TypeError("Unsupported file extension.")
 
-def convert_arr_to_binary(msg, n=8):
-    """Convert a message (array of n-bit ints) into an array of binary data"""
-    msg = np.repeat(msg, n)
+        message = np.concatenate([header, message], axis=None)
+        return message
 
-    iterator = np.tile(np.arange(n), msg.size // n)
-    mask = np.left_shift(1, iterator)
+    def convert_msg_to_binary(self, msg, n=8):
+        """Convert a message (array of n-bit ints) into an array of binary data"""
+        msg = np.repeat(msg, n)
 
-    bit = np.bitwise_and(msg, mask)
-    binary = np.right_shift(bit, iterator)
-    return binary.astype(np.dtype("u" + str(n//8)))
+        iterator = np.tile(np.arange(n), msg.size // n)
+        mask = np.left_shift(1, iterator)
 
-def _inject_bits(x1, x2):
-    x1 = np.bitwise_and(x1, 254)   
-    return np.bitwise_or(x1, x2)
+        bit = np.bitwise_and(msg, mask)
+        binary = np.right_shift(bit, iterator)
+        return binary.astype(np.dtype("u" + str(n//8)))
 
-def insert_binary(img, binary, ci=(0,1)):
-    """Insert binary data into the least significant bit of a color channel value"""
-    copy = np.copy(img)
-    channel = copy[:,:, ci[0]:ci[1]] 
-    
-    binary = np.resize(binary, channel.shape) #if the binary array is not big enough, it will loop over
+    def _inject_bits(self, x1, x2):
+        x1 = np.bitwise_and(x1, 254)   
+        return np.bitwise_or(x1, x2)
 
-    output = _inject_bits(channel, binary)
-    copy[:,:, ci[0]:ci[1]] = output
-    return copy   
+    def insert_binary(self, img, binary, ci=(0,1)):
+        """Insert binary data into the least significant bit of a color channel value"""
+        copy = np.copy(img)
+        channel = copy[:,:, ci[0]:ci[1]] 
+        binary = np.resize(binary, channel.shape) #if the binary array is not big enough, it will loop over
+
+        output = self._inject_bits(channel, binary)
+        copy[:,:, ci[0]:ci[1]] = output
+        return copy   
 
 #DECODING ----------------------------------------------------------------------------------------------
 
@@ -85,18 +86,19 @@ def convert_binary_to_arr(binary, n=8, all=False): #all stands for whether u wan
     size = np.multiply.reduce(shape)
 
     message = binary[8:size+8]
-    if not all: return np.resize(message, shape)
+    if not all and binary.size > size: return np.resize(message, shape)
     elif t == "|I": 
-        rows = binary.size // shape[1] // shape[2]
+        rows = binary.size // shape[1] // shape[2] 
         return np.resize(message, (rows, shape[1], shape[2]))
     elif t == "|T": 
         wraps = binary.size // (size+8) + 1
         return np.resize(message, binary.size - wraps * 8)
-        
-def write_message(msg, path):
-    ext = ntpath.splitext(path)[-1]
-    if ext == ".txt": open(path, "wb").write(struct.pack("B" * msg.size, *msg.ravel()))
-    elif ext in [".png", ".jpeg", ".jpg"]: cv2.imwrite(path, msg)
+
+def write_file(msg, path, ext):  
+    if ext == ".txt": open(path + ".txt", "wb").write(struct.pack("B" * msg.size, *msg.ravel()))
+    elif ext in [".png", ".jpeg", ".jpg"]: 
+        img = Image.fromarray(msg)
+        img.save(path + ".output" + ".png", optimize=True, compress_level=9)
     else: raise TypeError("Unsupported file extension")
 
 #OTHER ----------------------------------------------------------------------------------------------
