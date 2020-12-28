@@ -112,6 +112,11 @@ def difference(x, y, ci=(0,1)):
     return (a - b) 
 
 
+# TODO
+
+# better OOP
+# less overhead for using the headers
+# support for exe files
 
 
 
