@@ -2,35 +2,28 @@
 #
 #
 
-from PIL import Image
-import numpy as np
-import argparse
-import ntpath
+import stega
 
-import stega as st
+def encode():
+    #Open the message file and convert it to binary
+    message = stega.Message.fromimagefile("example/lenna.png", c1=0, c2=1)
+    binary = message.to_binary()
+    
+    #Open the host image and inject binary into it, then save the modified image file
+    host = stega.Host.fromimagefile("example/lenna.png")
+    host.inject_binary(binary, c2=3)
+    host.save("images_encoded/")
 
-# INITIALIZING PARSES CLASS FOR CMD LINE ARGUMENTS
-parser = argparse.ArgumentParser(description="Encode a message into an image.")
-parser.add_argument("image",          metavar="I",  type=str, help="a path to an image")
-parser.add_argument("message",        metavar="M",  type=str, help="a path to the message file")
-parser.add_argument("-o", "--output", metavar="p",  type=str, help="a path for the encoded image (default: 'images_encoded')", default="images_encoded")
+def decode():
+    #Open the modified host file and extract binary from it
+    host = stega.Host.fromimagefile("images_encoded/host_encoded.png")    
+    binary = host.extract_binary(c2=3)
 
-args = parser.parse_args()
+    #Create a message class from the extracted binary and convert it back to the original message, then save the decoded file
+    message = stega.Message.frombinary(binary)
+    message.decode(all=True)
+    message.save("messages_decoded/")
 
-# Creating an Encoder class
-encoder = st.Encoder()
-
-# Opening the image and the message and commencing the injection process
-image = np.asarray(Image.open(args.image))
-message = encoder.parse_message(args.message)
-
-binary = encoder.convert_msg_to_binary(message)
-image_encoded = encoder.insert_binary(image, binary)
-
-# Saving the output
-st.write_file(image_encoded, args.output + "/" + ntpath.splitext(ntpath.basename(args.image))[0], ".png")
-
-# Demonstrating the difference
-Image.fromarray(image).show("original")
-Image.fromarray(image_encoded).show("encoded")
+encode()
+decode()
 
