@@ -62,7 +62,11 @@ class Message:
 
     def decode(self, n=8, all=False):
         """Convert an array of extracted binary data into the original message"""
-        temp = np.resize(self.data, (-1, n))
+        print(self.data)
+        # temp = np.resize(self.data, (1, n))
+        temp = np.reshape(self.data, (-1, n))
+        # self.data.resize((-1, n), refcheck=False)
+        print(temp)
 
         #Binary operations to reduce the array of binary to decimal values
         bitrange = np.arange(n, dtype=np.dtype("u" + str(n//8)))
