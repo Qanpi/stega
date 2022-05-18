@@ -9,3 +9,11 @@ for usage on large chunks of data, but may contain bugs/unexpected behaviour. On
 for anything requiring reliability or accuracy. 
 
 Suggestions about code improvement are always appreciated.
+
+### What & Why?
+
+### Technological components
+
+## Goal
+
+## Example
