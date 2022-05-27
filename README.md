@@ -12,7 +12,7 @@ Anyways, I will still provide documentation for the project here. However, a dee
 ### What & Why?
 Steganography is, as defined by [Wikipedia](https://en.wikipedia.org/wiki/Steganography), "the practice of concealing a message within another message". After watching a Computerphile [video](https://www.youtube.com/watch?v=TWEXCYQKyDc) about this topic, I became quite excited about steganography. In this project, I dabble with the very basic idea of hiding messages (text, images) within the binary code of other images.
 
-### Technological components
+### Technical components
 - Numpy for binary and image array operations
   - optimized efficiency through vectorized binary operations
 - PIL Image library for reading and writing image files
