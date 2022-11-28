@@ -6,7 +6,7 @@ import stega
 
 def encode():
     #Open the message file and convert it to binary
-    message = stega.Message.fromimagefile("example/lennalight.png", c1=0, c2=1) #c1 - c2 represents the range of color channels (e.g. 0-3 means that all the RGB channels will be included)
+    message = stega.Message.fromimagefile("example/lennalight.png", c1=0, c2=3) #c1 - c2 represents the range of color channels (e.g. 0-3 means that all the RGB channels will be included)
     binary = message.to_binary()
     
     #Open the host image and inject binary into it, then save the modified image file
